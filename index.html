@@ -1,613 +1,685 @@
-<!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <title>Our Personality Chemistry</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <meta name="author" content="DDOK9"/>
-    <meta name="description" content="Discover your personality chemistry with friends and relationships"/>
-    
-    <!-- favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png">
-    
-    <!-- Google fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Graph visualization library -->
-    <script src="https://gw.alipayobjects.com/os/lib/antv/g6/4.3.11/dist/g6.min.js"></script>
-    
-    <style>
-        :root {
-            --primary: #4361ee;
-            --primary-dark: #3a56d4;
-            --secondary: #ff6b6b;
-            --light: #f8f9fa;
-            --dark: #212529;
-            --gray: #6c757d;
-            --success: #2ecc71;
-            --warning: #f39c12;
-            --danger: #e74c3c;
-            --info: #3498db;
-        }
-        
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f5f8ff;
-            color: #333;
-        }
-        
-        .navbar {
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .site-title {
-            color: white;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 1.2rem;
-        }
-        
-        .card {
-            border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            transition: transform 0.3s ease;
-            overflow: hidden;
-        }
-        
-        .card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .btn {
-            border-radius: 10px;
-            padding: 0.6rem 1.5rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary {
-            background-color: var(--primary);
-            border-color: var(--primary);
-        }
-        
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-            border-color: var(--primary-dark);
-        }
-        
-        .legend-line {
-            height: 4px;
-            border-radius: 2px;
-            width: 100%;
-        }
-        
-        .profile-pic {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid white;
-        }
-        
-        .compatibility-badge {
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 0.8rem;
-            z-index: 10;
-        }
-        
-        .personality-trait {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 15px;
-            background-color: rgba(67, 97, 238, 0.1);
-            color: var(--primary);
-            margin: 2px;
-            font-size: 0.8rem;
-        }
-        
-        .tooltip-inner {
-            max-width: 300px;
-            background-color: rgba(0, 0, 0, 0.8);
-            border-radius: 8px;
-            padding: 10px;
-        }
-        
-        #mountNode {
-            min-height: 360px;
-            background-color: white;
-            border-radius: 15px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        
-        .compatibility-details {
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 15px;
-            background-color: #f8f9fa;
-            border-left: 4px solid var(--primary);
-        }
-        
-        .trait-slider {
-            width: 100%;
-            margin: 10px 0;
-        }
-        
-        footer {
-            background-color: #212529;
-            color: #adb5bd;
-            padding: 30px 0;
-            margin-top: 50px;
-        }
-        
-        /* Animation */
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        
-        .pulse-animation {
-            animation: pulse 1.5s infinite;
-        }
-        
-        /* Additional personality types colors */
-        .mbti-color { background-color: #4361ee; }
-        .enneagram-color { background-color: #ff6b6b; }
-        .big5-color { background-color: #2ecc71; }
-        .disc-color { background-color: #f39c12; }
-        .love-language-color { background-color: #e74c3c; }
-        .astrology-color { background-color: #9b59b6; }
-        
-        /* Compatibility score visualization */
-        .score-circle {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: conic-gradient(var(--primary) 0% calc(var(--score) * 1%), #e9ecef calc(var(--score) * 1%) 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        
-        .score-circle::before {
-            content: '';
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background-color: white;
-        }
-        
-        .score-text {
-            position: relative;
-            z-index: 2;
-            font-weight: bold;
-            color: var(--dark);
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <!-- Navigation bar -->
-        <nav class="navbar fixed-top navbar-expand-lg navbar-dark" style="background-color: var(--primary);">
-            <div class="container">
-                <a class="site-title" href="/en/">
-                    <i class="fas fa-link me-2"></i>Our Personality Chemistry
-                </a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                    <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-globe me-1"></i> English
-                            </a>
-                            <ul class="dropdown-menu" aria-labelledby="languageDropdown">
-                                <li><a class="dropdown-item" href="/ko/our-personality-chemistry/3QQFUKmgX">한국어</a></li>
-                                <li><a class="dropdown-item active" href="/en/our-personality-chemistry/3QQFUKmgX">English</a></li>
-                                <li><a class="dropdown-item" href="/zh/our-personality-chemistry/3QQFUKmgX">简体中文</a></li>
-                                <li><a class="dropdown-item" href="/ja/our-personality-chemistry/3QQFUKmgX">日本語</a></li>
-                                <li><a class="dropdown-item" href="/es/our-personality-chemistry/3QQFUKmgX">Español</a></li>
-                                <li><a class="dropdown-item" href="/fr/our-personality-chemistry/3QQFUKmgX">Français</a></li>
-                            </ul>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#helpModal">
-                                <i class="fas fa-question-circle me-1"></i> Help
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
+import React, { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { X, Plus, Settings, Share2, Download, Info } from 'lucide-react';
 
-    <div class="container" style="margin-top: 80px; max-width: 800px;">
-        <!-- Main content -->
-        <div class="card mb-4">
-            <div class="card-body text-center py-4">
-                <h1 class="mb-3">Multi-Dimensional Personality Chemistry</h1>
-                <p class="lead">Discover how well you connect with others across multiple personality dimensions</p>
-                
-                <div class="d-flex justify-content-center mb-4">
-                    <div class="btn-group" role="group">
-                        <button type="button" class="btn btn-outline-primary active" id="btnMBTI">MBTI</button>
-                        <button type="button" class="btn btn-outline-primary" id="btnEnneagram">Enneagram</button>
-                        <button type="button" class="btn btn-outline-primary" id="btnBig5">Big 5</button>
-                        <button type="button" class="btn btn-outline-primary" id="btnDISC">DISC</button>
-                        <button type="button" class="btn btn-outline-primary" id="btnLoveLanguage">Love Languages</button>
-                    </div>
-                </div>
-                
-                <div class="alert alert-info d-flex align-items-center" role="alert">
-                    <i class="fas fa-info-circle me-2"></i>
+const PersonalityChemistry = () => {
+  // States for managing application data
+  const [groupName, setGroupName] = useState('');
+  const [members, setMembers] = useState([]);
+  const [activePersonality, setActivePersonality] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [compatibilityFilter, setCompatibilityFilter] = useState('all');
+  const [newMember, setNewMember] = useState({
+    name: '',
+    personality: 'INTJ',
+    energy: 50,
+    information: 50,
+    decisions: 50,
+    lifestyle: 50,
+    traits: []
+  });
+
+  // Personality types and traits
+  const personalityTypes = [
+    'INTJ', 'INTP', 'ENTJ', 'ENTP', 
+    'INFJ', 'INFP', 'ENFJ', 'ENFP', 
+    'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 
+    'ISTP', 'ISFP', 'ESTP', 'ESFP'
+  ];
+  
+  const traitOptions = [
+    'Analytical', 'Creative', 'Organized', 'Spontaneous',
+    'Reserved', 'Expressive', 'Practical', 'Theoretical',
+    'Traditional', 'Innovative', 'Detail-oriented', 'Big-picture',
+    'Logic-driven', 'Value-driven', 'Assertive', 'Turbulent'
+  ];
+
+  // Compatibility calculation - more nuanced based on multiple data points
+  const calculateCompatibility = (person1, person2) => {
+    let score = 0;
+    
+    // Base MBTI compatibility patterns
+    if (person1.personality[0] === person2.personality[0]) score += 5; // Same E/I preference
+    if (person1.personality[1] === person2.personality[1]) score += 10; // Same N/S preference
+    if (person1.personality[2] === person2.personality[2]) score += 8; // Same T/F preference
+    if (person1.personality[3] === person2.personality[3]) score += 7; // Same J/P preference
+    
+    // Add depth by considering the strength of preferences
+    const energyDiff = Math.abs(person1.energy - person2.energy);
+    const infoDiff = Math.abs(person1.information - person2.information);
+    const decisionDiff = Math.abs(person1.decisions - person2.decisions);
+    const lifestyleDiff = Math.abs(person1.lifestyle - person2.lifestyle);
+    
+    score += (100 - energyDiff) * 0.05; // Max 5 points for energy similarity
+    score += (100 - infoDiff) * 0.06; // Max 6 points for information processing similarity
+    score += (100 - decisionDiff) * 0.07; // Max 7 points for decision-making similarity
+    score += (100 - lifestyleDiff) * 0.04; // Max 4 points for lifestyle preference similarity
+    
+    // Consider shared traits
+    const sharedTraits = person1.traits.filter(trait => person2.traits.includes(trait));
+    score += sharedTraits.length * 1.5; // Each shared trait adds 1.5 points
+    
+    // Map score to compatibility label
+    let compatibility = '';
+    let color = '';
+    
+    if (score >= 45) {
+      compatibility = 'Perfect';
+      color = '#2D8FF4';
+    } else if (score >= 35) {
+      compatibility = 'Good';
+      color = '#36B162';
+    } else if (score >= 25) {
+      compatibility = 'OK';
+      color = '#B3D465';
+    } else if (score >= 15) {
+      compatibility = 'Not Bad';
+      color = '#FBC140';
+    } else {
+      compatibility = 'Challenging';
+      color = '#F03A36';
+    }
+    
+    return { score, compatibility, color };
+  };
+
+  // Add member
+  const handleAddMember = () => {
+    if (!newMember.name) return;
+    
+    setMembers([...members, { 
+      id: Date.now().toString(),
+      ...newMember 
+    }]);
+    
+    setNewMember({
+      name: '',
+      personality: 'INTJ',
+      energy: 50,
+      information: 50,
+      decisions: 50,
+      lifestyle: 50,
+      traits: []
+    });
+    
+    setShowAddModal(false);
+  };
+
+  // Remove member
+  const handleRemoveMember = (id) => {
+    setMembers(members.filter(member => member.id !== id));
+    if (activePersonality && activePersonality.id === id) {
+      setActivePersonality(null);
+    }
+  };
+
+  // Handle trait selection
+  const handleTraitToggle = (trait) => {
+    if (newMember.traits.includes(trait)) {
+      setNewMember({
+        ...newMember,
+        traits: newMember.traits.filter(t => t !== trait)
+      });
+    } else if (newMember.traits.length < 5) {
+      setNewMember({
+        ...newMember,
+        traits: [...newMember.traits, trait]
+      });
+    }
+  };
+
+  // Generate chart data
+  const getChartData = () => {
+    if (!activePersonality || members.length < 2) return [];
+    
+    return members
+      .filter(member => member.id !== activePersonality.id)
+      .map(member => {
+        const { score, compatibility, color } = calculateCompatibility(activePersonality, member);
+        return {
+          name: member.name,
+          score,
+          compatibility,
+          color
+        };
+      })
+      .sort((a, b) => b.score - a.score);
+  };
+
+  // Filter connections based on compatibility
+  const getFilteredMembers = () => {
+    if (!activePersonality || compatibilityFilter === 'all') {
+      return members;
+    }
+    
+    return members.filter(member => {
+      if (member.id === activePersonality.id) return true;
+      
+      const { compatibility } = calculateCompatibility(activePersonality, member);
+      return compatibility === compatibilityFilter;
+    });
+  };
+
+  // Sample data for demonstration
+  useEffect(() => {
+    const sampleMembers = [
+      {
+        id: '1',
+        name: 'Emma',
+        personality: 'ENFJ',
+        energy: 75,
+        information: 60,
+        decisions: 40,
+        lifestyle: 80,
+        traits: ['Expressive', 'Value-driven', 'Organized', 'Big-picture']
+      },
+      {
+        id: '2',
+        name: 'James',
+        personality: 'ISTP',
+        energy: 30,
+        information: 45,
+        decisions: 70,
+        lifestyle: 20,
+        traits: ['Analytical', 'Practical', 'Reserved', 'Spontaneous']
+      },
+      {
+        id: '3',
+        name: 'Sophie',
+        personality: 'INFP',
+        energy: 35,
+        information: 70,
+        decisions: 30,
+        lifestyle: 25,
+        traits: ['Creative', 'Value-driven', 'Reserved', 'Spontaneous']
+      }
+    ];
+    
+    setMembers(sampleMembers);
+  }, []);
+
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-indigo-600 text-white p-4 shadow-md">
+        <div className="container mx-auto flex justify-between items-center">
+          <h1 className="text-xl font-bold">Advanced Personality Chemistry</h1>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setShowInfoModal(true)}
+              className="p-2 rounded-full hover:bg-indigo-500 transition-colors"
+            >
+              <Info size={20} />
+            </button>
+            <button className="p-2 rounded-full hover:bg-indigo-500 transition-colors">
+              <Share2 size={20} />
+            </button>
+            <button className="p-2 rounded-full hover:bg-indigo-500 transition-colors">
+              <Settings size={20} />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-grow container mx-auto p-4">
+        {/* Group Name */}
+        <div className="mb-6">
+          <div className="flex gap-2 items-center mb-2">
+            <input
+              type="text"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              placeholder="Enter group name"
+              className="p-2 border rounded-lg flex-grow"
+            />
+            <button 
+              className="bg-indigo-600 text-white px-4 py-2 rounded-lg"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+
+        {/* Members and Compatibility */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Members List */}
+          <div className="bg-white p-4 rounded-lg shadow-md md:col-span-1">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Group Members</h2>
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="bg-indigo-600 text-white p-2 rounded-full"
+              >
+                <Plus size={20} />
+              </button>
+            </div>
+            
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {members.map(member => (
+                <div 
+                  key={member.id}
+                  className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
+                    activePersonality && activePersonality.id === member.id 
+                      ? 'border-indigo-600 bg-indigo-50' 
+                      : 'border-gray-200 hover:border-indigo-300'
+                  }`}
+                  onClick={() => setActivePersonality(member)}
+                >
+                  <div className="flex justify-between items-center">
                     <div>
-                        <strong>New in 2025:</strong> Our enhanced analysis now considers multiple personality frameworks for more accurate compatibility assessments.
+                      <h3 className="font-medium">{member.name}</h3>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <span className="font-semibold">{member.personality}</span>
+                        <span className="mx-2">|</span>
+                        <span className="text-xs">{member.traits.slice(0, 2).join(', ')}</span>
+                      </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Group Name -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <div class="input-group mb-3">
-                    <input type="text" id="groupNameInput" class="form-control" placeholder="Enter group name (max 20 characters)" aria-label="Group name" maxlength="20">
-                    <button class="btn btn-primary" type="button" onclick="saveGroupName()">Save Name</button>
-                </div>
-                <div id="groupNameDisplay" class="text-center mb-0" style="font-size: 1.5rem; font-weight: 600; color: var(--primary);"></div>
-            </div>
-        </div>
-
-        <!-- Visualization Area -->
-        <div class="card mb-4">
-            <div class="card-body p-0">
-                <div id="mountNode"></div>
-                
-                <div class="px-4 pb-3 text-center">
-                    <small class="text-muted">
-                        <i class="fas fa-mouse-pointer me-1"></i> Click on any name to see detailed compatibility information
-                    </small>
-                </div>
-                
-                <!-- Compatibility Filter Buttons -->
-                <div class="row g-2 px-4 pb-4">
-                    <div class="col">
-                        <button onclick="showAllEdges()" class="btn btn-sm btn-outline-secondary w-100 d-flex flex-column align-items-center justify-content-center" style="height: 60px;">
-                            <div class="legend-line mb-1" style="background-color:#777779; width: 40px;"></div>
-                            <small>All</small>
-                        </button>
-                    </div>
-                    <div class="col">
-                        <button onclick="showCompatibility('Perfect')" class="btn btn-sm btn-outline-secondary w-100 d-flex flex-column align-items-center justify-content-center" style="height: 60px;">
-                            <div class="legend-line mb-1" style="background-color:#2D8FF4; width: 40px;"></div>
-                            <small>Perfect</small>
-                        </button>
-                    </div>
-                    <div class="col">
-                        <button onclick="showCompatibility('Good')" class="btn btn-sm btn-outline-secondary w-100 d-flex flex-column align-items-center justify-content-center" style="height: 60px;">
-                            <div class="legend-line mb-1" style="background-color:#36B162; width: 40px;"></div>
-                            <small>Good</small>
-                        </button>
-                    </div>
-                    <div class="col">
-                        <button onclick="showCompatibility('OK')" class="btn btn-sm btn-outline-secondary w-100 d-flex flex-column align-items-center justify-content-center" style="height: 60px;">
-                            <div class="legend-line mb-1" style="background-color:#B3D465; width: 40px;"></div>
-                            <small>OK</small>
-                        </button>
-                    </div>
-                    <div class="col">
-                        <button onclick="showCompatibility('Not Bad')" class="btn btn-sm btn-outline-secondary w-100 d-flex flex-column align-items-center justify-content-center" style="height: 60px;">
-                            <div class="legend-line mb-1" style="background-color:#FBC140; width: 40px;"></div>
-                            <small>Not Bad</small>
-                        </button>
-                    </div>
-                    <div class="col">
-                        <button onclick="showCompatibility('Disaster')" class="btn btn-sm btn-outline-secondary w-100 d-flex flex-column align-items-center justify-content-center" style="height: 60px;">
-                            <div class="legend-line mb-1" style="background-color:#F03A36; width: 40px;"></div>
-                            <small>Disaster</small>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Detailed Compatibility Info (Hidden initially) -->
-        <div id="compatibilityDetails" class="card mb-4" style="display: none;">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0" id="compatibilityTitle">Compatibility Details</h5>
-            </div>
-            <div class="card-body">
-                <div class="row align-items-center mb-4">
-                    <div class="col-md-4 text-center">
-                        <div class="d-flex justify-content-center position-relative mb-2">
-                            <img src="/api/placeholder/80/80" alt="Person 1" class="profile-pic me-3" style="width: 80px; height: 80px;">
-                            <img src="/api/placeholder/80/80" alt="Person 2" class="profile-pic" style="width: 80px; height: 80px;">
-                            <div class="compatibility-badge" style="background-color: #36B162; top: -15px; right: 75px;">85%</div>
-                        </div>
-                        <h5 id="personsNames">Person A & Person B</h5>
-                    </div>
-                    <div class="col-md-8">
-                        <div class="mb-3">
-                            <h6>Overall Compatibility</h6>
-                            <div class="progress" style="height: 24px;">
-                                <div class="progress-bar bg-success" role="progressbar" style="width: 85%;" aria-valuenow="85" aria-valuemin="0" aria-valuemax="100">85%</div>
-                            </div>
-                        </div>
-                        
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <div class="card bg-light">
-                                    <div class="card-body p-2 text-center">
-                                        <div style="font-size: 0.8rem;">Communication</div>
-                                        <div class="progress mt-1" style="height: 8px;">
-                                            <div class="progress-bar bg-info" role="progressbar" style="width: 78%;" aria-valuenow="78" aria-valuemin="0" aria-valuemax="100"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="card bg-light">
-                                    <div class="card-body p-2 text-center">
-                                        <div style="font-size: 0.8rem;">Conflict Style</div>
-                                        <div class="progress mt-1" style="height: 8px;">
-                                            <div class="progress-bar bg-info" role="progressbar" style="width: 65%;" aria-valuenow="65" aria-valuemin="0" aria-valuemax="100"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="card bg-light">
-                                    <div class="card-body p-2 text-center">
-                                        <div style="font-size: 0.8rem;">Values Alignment</div>
-                                        <div class="progress mt-1" style="height: 8px;">
-                                            <div class="progress-bar bg-info" role="progressbar" style="width: 92%;" aria-valuenow="92" aria-valuemin="0" aria-valuemax="100"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="card bg-light">
-                                    <div class="card-body p-2 text-center">
-                                        <div style="font-size: 0.8rem;">Energy Dynamic</div>
-                                        <div class="progress mt-1" style="height: 8px;">
-                                            <div class="progress-bar bg-info" role="progressbar" style="width: 88%;" aria-valuenow="88" aria-valuemin="0" aria-valuemax="100"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <hr>
-                
-                <!-- Personality Profiles -->
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <h6 class="border-bottom pb-2">Person A</h6>
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-primary me-2">MBTI</span>
-                                <span class="fw-bold">ENFJ</span>
-                            </div>
-                            <small class="text-muted">The Protagonist: Charismatic, inspiring, and natural leaders</small>
-                        </div>
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-danger me-2">Enneagram</span>
-                                <span class="fw-bold">Type 2w3</span>
-                            </div>
-                            <small class="text-muted">The Helper with Achiever wing: Caring, supportive with ambition</small>
-                        </div>
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-success me-2">Top Trait</span>
-                                <span class="fw-bold">Empathy</span>
-                            </div>
-                        </div>
-                        <div>
-                            <span class="personality-trait">Extroverted</span>
-                            <span class="personality-trait">People-focused</span>
-                            <span class="personality-trait">Structured</span>
-                            <span class="personality-trait">Idealistic</span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="border-bottom pb-2">Person B</h6>
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-primary me-2">MBTI</span>
-                                <span class="fw-bold">INTP</span>
-                            </div>
-                            <small class="text-muted">The Logician: Innovative, logical, and analytical thinkers</small>
-                        </div>
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-danger me-2">Enneagram</span>
-                                <span class="fw-bold">Type 5w6</span>
-                            </div>
-                            <small class="text-muted">The Investigator with Loyalist wing: Curious, perceptive, cautious</small>
-                        </div>
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-success me-2">Top Trait</span>
-                                <span class="fw-bold">Problem-solving</span>
-                            </div>
-                        </div>
-                        <div>
-                            <span class="personality-trait">Introverted</span>
-                            <span class="personality-trait">Analytical</span>
-                            <span class="personality-trait">Adaptable</span>
-                            <span class="personality-trait">Objective</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <hr>
-                
-                <!-- Compatibility Analysis -->
-                <h6>Compatibility Analysis</h6>
-                <div class="compatibility-details">
-                    <p><strong>Strengths:</strong> This pairing creates a beautiful balance of emotional intelligence and logical thinking. Person A brings warmth, interpersonal skills, and organizational abilities, while Person B contributes analytical depth, innovative ideas, and objective problem-solving.</p>
-                    
-                    <p><strong>Challenges:</strong> Communication styles differ significantly - Person A values emotional expression and harmony, while Person B prefers logical discussion and may seem detached. Person A might find Person B's directness uncomfortable, while Person B might feel overwhelmed by Person A's social energy.</p>
-                    
-                    <p><strong>Growth opportunities:</strong> Person A can help Person B develop emotional intelligence and social skills, while Person B can help Person A approach problems more logically and consider multiple perspectives before making decisions.</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Sharing Options -->
-        <div class="card mb-4">
-            <div class="card-header bg-light">
-                <h5 class="mb-0">Invite Your Friends</h5>
-            </div>
-            <div class="card-body">
-                <p class="card-text mb-3">Invite your friends to see your personality chemistry! You can have up to 10 people in one group.</p>
-                
-                <div class="d-grid gap-2 mb-3">
-                    <a href="https://api.whatsapp.com/send?text=https://ddok9.com/en/our-personality-chemistry/3QQFUKmgX" class="btn btn-success" target="_blank">
-                        <i class="fab fa-whatsapp me-2"></i> Share via WhatsApp
-                    </a>
-                    <a href="https://www.facebook.com/share.php?u=https://ddok9.com/en/our-personality-chemistry/3QQFUKmgX" class="btn btn-primary" target="_blank">
-                        <i class="fab fa-facebook-f me-2"></i> Share via Facebook
-                    </a>
-                    <button onclick="copyToClipboard()" class="btn btn-outline-dark">
-                        <i class="fas fa-link me-2"></i> Copy and share link
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveMember(member.id);
+                      }}
+                      className="text-gray-400 hover:text-red-500"
+                    >
+                      <X size={18} />
                     </button>
+                  </div>
+                </div>
+              ))}
+              
+              {members.length === 0 && (
+                <div className="text-center text-gray-500 py-4">
+                  <p>No members added yet</p>
+                  <button 
+                    onClick={() => setShowAddModal(true)}
+                    className="mt-2 text-indigo-600 hover:underline"
+                  >
+                    Add your first member
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Compatibility Display */}
+          <div className="bg-white p-4 rounded-lg shadow-md md:col-span-2">
+            {activePersonality ? (
+              <>
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold">
+                    Compatibility with {activePersonality.name}
+                  </h2>
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium">{activePersonality.personality}</span> | 
+                    {activePersonality.traits.join(', ')}
+                  </div>
                 </div>
                 
-                <div class="d-grid">
-                    <a href="/en/our-personality-chemistry/3QQFUKmgX/form?self=false" class="btn btn-light border">
-                        <i class="fas fa-user-plus me-2"></i> Add Personality Type Directly
-                    </a>
-                </div>
-            </div>
-        </div>
-        
-        <!-- New Features Card -->
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Enhanced Features</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-start">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-chart-pie fa-2x text-primary"></i>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6>Multi-dimensional Analysis</h6>
-                                <p class="small">Integrate MBTI, Enneagram, Big 5, DISC, and Love Languages for a complete personality picture.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-start">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-brain fa-2x text-primary"></i>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6>AI-Powered Insights</h6>
-                                <p class="small">Advanced algorithms provide detailed compatibility analysis based on thousands of data points.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-start">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-users fa-2x text-primary"></i>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6>Team Dynamics</h6>
-                                <p class="small">Specialized analysis for professional teams, focusing on workplace strengths and challenges.</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="d-flex align-items-start">
-                            <div class="flex-shrink-0">
-                                <i class="fas fa-heart fa-2x text-primary"></i>
-                            </div>
-                            <div class="flex-grow-1 ms-3">
-                                <h6>Relationship Guidance</h6>
-                                <p class="small">Tailored advice for improving communication and understanding in all relationships.</p>
-                            </div>
-                        </div>
-                    </div>
+                {/* Compatibility Filters */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <button 
+                    onClick={() => setCompatibilityFilter('all')}
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      compatibilityFilter === 'all' 
+                        ? 'bg-gray-800 text-white' 
+                        : 'bg-gray-200 text-gray-800'
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button 
+                    onClick={() => setCompatibilityFilter('Perfect')}
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      compatibilityFilter === 'Perfect' 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-blue-100 text-blue-800'
+                    }`}
+                  >
+                    Perfect
+                  </button>
+                  <button 
+                    onClick={() => setCompatibilityFilter('Good')}
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      compatibilityFilter === 'Good' 
+                        ? 'bg-green-600 text-white' 
+                        : 'bg-green-100 text-green-800'
+                    }`}
+                  >
+                    Good
+                  </button>
+                  <button 
+                    onClick={() => setCompatibilityFilter('OK')}
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      compatibilityFilter === 'OK' 
+                        ? 'bg-lime-600 text-white' 
+                        : 'bg-lime-100 text-lime-800'
+                    }`}
+                  >
+                    OK
+                  </button>
+                  <button 
+                    onClick={() => setCompatibilityFilter('Not Bad')}
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      compatibilityFilter === 'Not Bad' 
+                        ? 'bg-amber-600 text-white' 
+                        : 'bg-amber-100 text-amber-800'
+                    }`}
+                  >
+                    Not Bad
+                  </button>
+                  <button 
+                    onClick={() => setCompatibilityFilter('Challenging')}
+                    className={`px-3 py-1 rounded-full text-sm ${
+                      compatibilityFilter === 'Challenging' 
+                        ? 'bg-red-600 text-white' 
+                        : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    Challenging
+                  </button>
                 </div>
                 
-                <div class="text-center mt-4">
-                    <a href="https://256personalities.com" class="btn btn-lg btn-primary pulse-animation" target="_blank">
-                        Try 256 Personalities for More Depth <i class="fas fa-external-link-alt ms-2"></i>
-                    </a>
+                {/* Compatibility Chart */}
+                <div className="h-64 mb-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={getChartData()}
+                      layout="vertical"
+                      margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" domain={[0, 50]} />
+                      <YAxis dataKey="name" type="category" width={80} />
+                      <Tooltip 
+                        formatter={(value, name, props) => [`${value}/50`, 'Compatibility Score']}
+                        labelFormatter={(value) => `${value}`}
+                      />
+                      <Bar 
+                        dataKey="score" 
+                        name="Compatibility Score"
+                        barSize={20}
+                        radius={[0, 4, 4, 0]}
+                      >
+                        {getChartData().map((entry, index) => (
+                          <rect key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Create New Group -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <h5 class="card-title">Create a New Group</h5>
-                <p class="card-text">Want to analyze compatibility with another group of friends or colleagues?</p>
-                <a href="/en/our-personality-chemistry" class="btn btn-outline-primary">
-                    <i class="fas fa-plus-circle me-2"></i> Create New Group
-                </a>
-            </div>
-        </div>
-        
-        <!-- Other Compatibility Tests -->
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">Explore More Compatibility Tools</h5>
-                <div class="row g-3 mt-2">
-                    <div class="col-md-6">
-                        <a href="/en/star" class="card text-decoration-none text-dark h-100">
-                            <div class="card-body text-center">
-                                <i class="fas fa-star fa-2x text-warning mb-2"></i>
-                                <h6>Zodiac Sign Chemistry</h6>
-                                <p class="small mb-0">Explore astrological compatibility</p>
-                            </div>
-                        </a>
+                
+                {/* Compatibility Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {getChartData().length > 0 ? getChartData().map((data) => (
+                    <div 
+                      key={data.name}
+                      className="border p-3 rounded-lg"
+                      style={{ borderColor: data.color }}
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-medium">{data.name}</h3>
+                        <span 
+                          className="px-2 py-1 rounded-full text-xs text-white"
+                          style={{ backgroundColor: data.color }}
+                        >
+                          {data.compatibility}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <div className="flex justify-between">
+                          <span>Compatibility Score:</span>
+                          <span className="font-semibold">{data.score}/50</span>
+                        </div>
+                      </div>
                     </div>
-                    <div class="col-md-6">
-                        <a href="#" class="card text-decoration-none text-dark h-100">
-                            <div class="card-body text-center">
-                                <i class="fas fa-hand-holding-heart fa-2x text-danger mb-2"></i>
-                                <h6>Love Language Matcher</h6>
-                                <p class="small mb-0">Find your perfect match based on love languages</p>
-                            </div>
-                        </a>
+                  )) : (
+                    <div className="col-span-2 text-center text-gray-500 py-6">
+                      <p>Add more members to see compatibility</p>
                     </div>
+                  )}
                 </div>
-            </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full py-12 text-gray-500">
+                <p className="mb-2">Select a member to see their compatibility</p>
+                {members.length < 2 && (
+                  <p className="text-sm">You need at least two members to compare</p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-    </div>
+      </main>
 
-    <!-- Help Modal -->
-    <div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      {/* Add Member Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Add New Member</h2>
+              <button 
+                onClick={() => setShowAddModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Name Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Name
+                </label>
+                <input 
+                  type="text"
+                  value={newMember.name}
+                  onChange={(e) => setNewMember({...newMember, name: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                  placeholder="Enter name"
+                />
+              </div>
+              
+              {/* Personality Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Personality Type
+                </label>
+                <select
+                  value={newMember.personality}
+                  onChange={(e) => setNewMember({...newMember, personality: e.target.value})}
+                  className="w-full p-2 border rounded-lg"
+                >
+                  {personalityTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Preference Strength Sliders */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Preference Strength
+                </label>
+                
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>Introvert</span>
+                      <span>Extrovert</span>
+                    </div>
+                    <input 
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={newMember.energy}
+                      onChange={(e) => setNewMember({...newMember, energy: parseInt(e.target.value)})}
+                      className="w-full"
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>Sensing</span>
+                      <span>Intuition</span>
+                    </div>
+                    <input 
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={newMember.information}
+                      onChange={(e) => setNewMember({...newMember, information: parseInt(e.target.value)})}
+                      className="w-full"
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>Thinking</span>
+                      <span>Feeling</span>
+                    </div>
+                    <input 
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={newMember.decisions}
+                      onChange={(e) => setNewMember({...newMember, decisions: parseInt(e.target.value)})}
+                      className="w-full"
+                    />
+                  </div>
+                  
+                  <div>
+                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>Perceiving</span>
+                      <span>Judging</span>
+                    </div>
+                    <input 
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={newMember.lifestyle}
+                      onChange={(e) => setNewMember({...newMember, lifestyle: parseInt(e.target.value)})}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Traits Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Key Traits (select up to 5)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {traitOptions.map(trait => (
+                    <button
+                      key={trait}
+                      onClick={() => handleTraitToggle(trait)}
+                      className={`px-3 py-1 text-xs rounded-full ${
+                        newMember.traits.includes(trait)
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-200 text-gray-800'
+                      }`}
+                    >
+                      {trait}
+                    </button>
+                  ))}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">
+                  {newMember.traits.length}/5 traits selected
+                </div>
+              </div>
+              
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddMember}
+                  className="flex-1 py-2 bg-indigo-600 text-white rounded-lg disabled:bg-indigo-300"
+                  disabled={!newMember.name}
+                >
+                  Add Member
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Info Modal */}
+      {showInfoModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">About Personality Chemistry</h2>
+              <button 
+                onClick={() => setShowInfoModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="space-y-4 text-sm">
+              <p>
+                This advanced personality compatibility tool goes beyond basic MBTI compatibility by analyzing:
+              </p>
+              
+              <ul className="list-disc pl-5 space-y-1">
+                <li><strong>Preference strength</strong> - The intensity of each MBTI dimension</li>
+                <li><strong>Personal traits</strong> - Specific characteristics that add depth to compatibility</li>
+                <li><strong>Multiple compatibility factors</strong> - A sophisticated algorithm that considers various aspects of personality</li>
+              </ul>
+              
+              <p>
+                Compatibility scores are calculated on a 50-point scale:
+              </p>
+              
+              <div className="space-y-1">
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full bg-blue-600 mr-2"></div>
+                  <span><strong>Perfect (45-50)</strong>: Exceptional compatibility</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full bg-green-600 mr-2"></div>
+                  <span><strong>Good (35-44)</strong>: Strong compatibility</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full bg-lime-600 mr-2"></div>
+                  <span><strong>OK (25-34)</strong>: Moderate compatibility</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full bg-amber-500 mr-2"></div>
+                  <span><strong>Not Bad (15-24)</strong>: Some compatibility challenges</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full bg-red-600 mr-2"></div>
+                  <span><strong>Challenging (0-14)</strong>: Significant compatibility challenges</span>
+                </div>
+              </div>
+              
+              <p>
+                Remember that this tool is meant to be informative and fun - real relationships are complex and nuanced beyond what any personality system can fully capture.
+              </p>
+              
+              <button
+                onClick={() => setShowInfoModal(false)}
+                className="w-full py-2 mt-2 bg-indigo-600 text-white rounded-lg"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default PersonalityChemistry;
