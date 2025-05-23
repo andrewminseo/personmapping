@@ -1,685 +1,1218 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { X, Plus, Settings, Share2, Download, Info } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Airflow Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-const PersonalityChemistry = () => {
-  // States for managing application data
-  const [groupName, setGroupName] = useState('');
-  const [members, setMembers] = useState([]);
-  const [activePersonality, setActivePersonality] = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showInfoModal, setShowInfoModal] = useState(false);
-  const [compatibilityFilter, setCompatibilityFilter] = useState('all');
-  const [newMember, setNewMember] = useState({
-    name: '',
-    personality: 'INTJ',
-    energy: 50,
-    information: 50,
-    decisions: 50,
-    lifestyle: 50,
-    traits: []
-  });
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f23, #1a1a2e);
+            color: white;
+            overflow: hidden;
+        }
 
-  // Personality types and traits
-  const personalityTypes = [
-    'INTJ', 'INTP', 'ENTJ', 'ENTP', 
-    'INFJ', 'INFP', 'ENFJ', 'ENFP', 
-    'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 
-    'ISTP', 'ISFP', 'ESTP', 'ESFP'
-  ];
-  
-  const traitOptions = [
-    'Analytical', 'Creative', 'Organized', 'Spontaneous',
-    'Reserved', 'Expressive', 'Practical', 'Theoretical',
-    'Traditional', 'Innovative', 'Detail-oriented', 'Big-picture',
-    'Logic-driven', 'Value-driven', 'Assertive', 'Turbulent'
-  ];
+        .container {
+            display: flex;
+            height: 100vh;
+        }
 
-  // Compatibility calculation - more nuanced based on multiple data points
-  const calculateCompatibility = (person1, person2) => {
-    let score = 0;
-    
-    // Base MBTI compatibility patterns
-    if (person1.personality[0] === person2.personality[0]) score += 5; // Same E/I preference
-    if (person1.personality[1] === person2.personality[1]) score += 10; // Same N/S preference
-    if (person1.personality[2] === person2.personality[2]) score += 8; // Same T/F preference
-    if (person1.personality[3] === person2.personality[3]) score += 7; // Same J/P preference
-    
-    // Add depth by considering the strength of preferences
-    const energyDiff = Math.abs(person1.energy - person2.energy);
-    const infoDiff = Math.abs(person1.information - person2.information);
-    const decisionDiff = Math.abs(person1.decisions - person2.decisions);
-    const lifestyleDiff = Math.abs(person1.lifestyle - person2.lifestyle);
-    
-    score += (100 - energyDiff) * 0.05; // Max 5 points for energy similarity
-    score += (100 - infoDiff) * 0.06; // Max 6 points for information processing similarity
-    score += (100 - decisionDiff) * 0.07; // Max 7 points for decision-making similarity
-    score += (100 - lifestyleDiff) * 0.04; // Max 4 points for lifestyle preference similarity
-    
-    // Consider shared traits
-    const sharedTraits = person1.traits.filter(trait => person2.traits.includes(trait));
-    score += sharedTraits.length * 1.5; // Each shared trait adds 1.5 points
-    
-    // Map score to compatibility label
-    let compatibility = '';
-    let color = '';
-    
-    if (score >= 45) {
-      compatibility = 'Perfect';
-      color = '#2D8FF4';
-    } else if (score >= 35) {
-      compatibility = 'Good';
-      color = '#36B162';
-    } else if (score >= 25) {
-      compatibility = 'OK';
-      color = '#B3D465';
-    } else if (score >= 15) {
-      compatibility = 'Not Bad';
-      color = '#FBC140';
-    } else {
-      compatibility = 'Challenging';
-      color = '#F03A36';
-    }
-    
-    return { score, compatibility, color };
-  };
+        .control-panel {
+            width: 320px;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 2px solid #333;
+            backdrop-filter: blur(10px);
+        }
 
-  // Add member
-  const handleAddMember = () => {
-    if (!newMember.name) return;
-    
-    setMembers([...members, { 
-      id: Date.now().toString(),
-      ...newMember 
-    }]);
-    
-    setNewMember({
-      name: '',
-      personality: 'INTJ',
-      energy: 50,
-      information: 50,
-      decisions: 50,
-      lifestyle: 50,
-      traits: []
-    });
-    
-    setShowAddModal(false);
-  };
+        .main-canvas {
+            flex: 1;
+            position: relative;
+            background: radial-gradient(circle at center, #0a0a1a, #000);
+        }
 
-  // Remove member
-  const handleRemoveMember = (id) => {
-    setMembers(members.filter(member => member.id !== id));
-    if (activePersonality && activePersonality.id === id) {
-      setActivePersonality(null);
-    }
-  };
+        canvas {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
 
-  // Handle trait selection
-  const handleTraitToggle = (trait) => {
-    if (newMember.traits.includes(trait)) {
-      setNewMember({
-        ...newMember,
-        traits: newMember.traits.filter(t => t !== trait)
-      });
-    } else if (newMember.traits.length < 5) {
-      setNewMember({
-        ...newMember,
-        traits: [...newMember.traits, trait]
-      });
-    }
-  };
+        .control-group {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
 
-  // Generate chart data
-  const getChartData = () => {
-    if (!activePersonality || members.length < 2) return [];
-    
-    return members
-      .filter(member => member.id !== activePersonality.id)
-      .map(member => {
-        const { score, compatibility, color } = calculateCompatibility(activePersonality, member);
-        return {
-          name: member.name,
-          score,
-          compatibility,
-          color
-        };
-      })
-      .sort((a, b) => b.score - a.score);
-  };
+        .control-group h3 {
+            margin-bottom: 15px;
+            color: #4fc3f7;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
 
-  // Filter connections based on compatibility
-  const getFilteredMembers = () => {
-    if (!activePersonality || compatibilityFilter === 'all') {
-      return members;
-    }
-    
-    return members.filter(member => {
-      if (member.id === activePersonality.id) return true;
-      
-      const { compatibility } = calculateCompatibility(activePersonality, member);
-      return compatibility === compatibilityFilter;
-    });
-  };
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
 
-  // Sample data for demonstration
-  useEffect(() => {
-    const sampleMembers = [
-      {
-        id: '1',
-        name: 'Emma',
-        personality: 'ENFJ',
-        energy: 75,
-        information: 60,
-        decisions: 40,
-        lifestyle: 80,
-        traits: ['Expressive', 'Value-driven', 'Organized', 'Big-picture']
-      },
-      {
-        id: '2',
-        name: 'James',
-        personality: 'ISTP',
-        energy: 30,
-        information: 45,
-        decisions: 70,
-        lifestyle: 20,
-        traits: ['Analytical', 'Practical', 'Reserved', 'Spontaneous']
-      },
-      {
-        id: '3',
-        name: 'Sophie',
-        personality: 'INFP',
-        energy: 35,
-        information: 70,
-        decisions: 30,
-        lifestyle: 25,
-        traits: ['Creative', 'Value-driven', 'Reserved', 'Spontaneous']
-      }
-    ];
-    
-    setMembers(sampleMembers);
-  }, []);
+        label {
+            font-size: 12px;
+            color: #ccc;
+            min-width: 120px;
+        }
 
-  return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-indigo-600 text-white p-4 shadow-md">
-        <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl font-bold">Advanced Personality Chemistry</h1>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setShowInfoModal(true)}
-              className="p-2 rounded-full hover:bg-indigo-500 transition-colors"
-            >
-              <Info size={20} />
-            </button>
-            <button className="p-2 rounded-full hover:bg-indigo-500 transition-colors">
-              <Share2 size={20} />
-            </button>
-            <button className="p-2 rounded-full hover:bg-indigo-500 transition-colors">
-              <Settings size={20} />
-            </button>
-          </div>
+        input[type="range"] {
+            flex: 1;
+            margin: 0 10px;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #4fc3f7;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #333;
+            border-radius: 5px;
+            color: white;
+            font-size: 12px;
+        }
+
+        select {
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #333;
+            border-radius: 5px;
+            color: white;
+            font-size: 12px;
+        }
+
+        .value-display {
+            min-width: 40px;
+            text-align: right;
+            font-size: 11px;
+            color: #4fc3f7;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        button {
+            flex: 1;
+            padding: 10px;
+            background: linear-gradient(135deg, #4fc3f7, #29b6f6);
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #29b6f6, #0288d1);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .preset-buttons button {
+            font-size: 10px;
+            padding: 8px;
+        }
+
+        .stats-display {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            color: #4fc3f7;
+            backdrop-filter: blur(10px);
+        }
+
+        .color-picker {
+            width: 40px;
+            height: 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #4fc3f7;
+        }
+
+        .image-preview {
+            width: 100%;
+            max-height: 150px;
+            object-fit: contain;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="control-panel">
+            <div class="control-group">
+                <h3>🖼️ Image Controls</h3>
+                <input type="file" id="imageUpload" accept="image/*">
+                <img id="imagePreview" class="image-preview" style="display: none;">
+                <div class="control-row">
+                    <label>Image Opacity:</label>
+                    <input type="range" id="imageOpacity" min="0" max="100" value="50">
+                    <span class="value-display" id="imageOpacityValue">50%</span>
+                </div>
+                <div class="control-row">
+                    <label>Image Scale:</label>
+                    <input type="range" id="imageScale" min="10" max="200" value="100">
+                    <span class="value-display" id="imageScaleValue">100%</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>🌪️ Flow Parameters</h3>
+                <div class="control-row">
+                    <label>Flow Strength:</label>
+                    <input type="range" id="flowStrength" min="0" max="100" value="50">
+                    <span class="value-display" id="flowStrengthValue">50</span>
+                </div>
+                <div class="control-row">
+                    <label>Turbulence:</label>
+                    <input type="range" id="turbulence" min="0" max="100" value="30">
+                    <span class="value-display" id="turbulenceValue">30</span>
+                </div>
+                <div class="control-row">
+                    <label>Viscosity:</label>
+                    <input type="range" id="viscosity" min="0" max="100" value="20">
+                    <span class="value-display" id="viscosityValue">20</span>
+                </div>
+                <div class="control-row">
+                    <label>Flow Direction:</label>
+                    <input type="range" id="flowDirection" min="0" max="360" value="0">
+                    <span class="value-display" id="flowDirectionValue">0°</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>🎨 Particle System</h3>
+                <div class="control-row">
+                    <label>Particle Count:</label>
+                    <input type="range" id="particleCount" min="100" max="5000" value="2000">
+                    <span class="value-display" id="particleCountValue">2000</span>
+                </div>
+                <div class="control-row">
+                    <label>Particle Size:</label>
+                    <input type="range" id="particleSize" min="1" max="10" value="2">
+                    <span class="value-display" id="particleSizeValue">2</span>
+                </div>
+                <div class="control-row">
+                    <label>Particle Speed:</label>
+                    <input type="range" id="particleSpeed" min="1" max="50" value="10">
+                    <span class="value-display" id="particleSpeedValue">10</span>
+                </div>
+                <div class="control-row">
+                    <label>Trail Length:</label>
+                    <input type="range" id="trailLength" min="1" max="20" value="8">
+                    <span class="value-display" id="trailLengthValue">8</span>
+                </div>
+                <div class="control-row">
+                    <label>Particle Color:</label>
+                    <input type="color" id="particleColor" value="#4fc3f7" class="color-picker">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>🌊 Vector Field</h3>
+                <div class="control-row">
+                    <label>Show Vectors:</label>
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="showVectors" checked>
+                    </div>
+                </div>
+                <div class="control-row">
+                    <label>Vector Density:</label>
+                    <input type="range" id="vectorDensity" min="10" max="100" value="30">
+                    <span class="value-display" id="vectorDensityValue">30</span>
+                </div>
+                <div class="control-row">
+                    <label>Vector Scale:</label>
+                    <input type="range" id="vectorScale" min="1" max="50" value="15">
+                    <span class="value-display" id="vectorScaleValue">15</span>
+                </div>
+                <div class="control-row">
+                    <label>Vector Color:</label>
+                    <input type="color" id="vectorColor" value="#ffffff" class="color-picker">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>🔄 Animation</h3>
+                <div class="control-row">
+                    <label>Animation Speed:</label>
+                    <input type="range" id="animationSpeed" min="1" max="100" value="30">
+                    <span class="value-display" id="animationSpeedValue">30</span>
+                </div>
+                <div class="control-row">
+                    <label>Time Scale:</label>
+                    <input type="range" id="timeScale" min="1" max="50" value="10">
+                    <span class="value-display" id="timeScaleValue">10</span>
+                </div>
+                <div class="control-row">
+                    <label>Flow Pattern:</label>
+                    <select id="flowPattern">
+                        <option value="uniform">Uniform Flow</option>
+                        <option value="vortex">Vortex</option>
+                        <option value="radial">Radial Flow</option>
+                        <option value="spiral">Spiral</option>
+                        <option value="wave">Wave Pattern</option>
+                        <option value="turbulent">Turbulent</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>🎯 Presets</h3>
+                <div class="preset-buttons">
+                    <button onclick="loadPreset('wind')">Wind Tunnel</button>
+                    <button onclick="loadPreset('hurricane')">Hurricane</button>
+                    <button onclick="loadPreset('laminar')">Laminar Flow</button>
+                    <button onclick="loadPreset('chaos')">Chaos</button>
+                    <button onclick="loadPreset('gentle')">Gentle Breeze</button>
+                    <button onclick="loadPreset('industrial')">Industrial</button>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button onclick="toggleAnimation()">⏯️ Play/Pause</button>
+                <button onclick="resetSimulation()">🔄 Reset</button>
+                <button onclick="exportFrame()">📸 Export</button>
+            </div>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="flex-grow container mx-auto p-4">
-        {/* Group Name */}
-        <div className="mb-6">
-          <div className="flex gap-2 items-center mb-2">
-            <input
-              type="text"
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              placeholder="Enter group name"
-              className="p-2 border rounded-lg flex-grow"
-            />
-            <button 
-              className="bg-indigo-600 text-white px-4 py-2 rounded-lg"
-            >
-              Save
-            </button>
-          </div>
+        <div class="main-canvas">
+            <canvas id="airflowCanvas"></canvas>
+            <div class="stats-display" id="statsDisplay">
+                FPS: <span id="fpsCounter">0</span><br>
+                Particles: <span id="particleCounter">0</span><br>
+                Flow Rate: <span id="flowRate">0</span> m/s
+            </div>
         </div>
-
-        {/* Members and Compatibility */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Members List */}
-          <div className="bg-white p-4 rounded-lg shadow-md md:col-span-1">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Group Members</h2>
-              <button 
-                onClick={() => setShowAddModal(true)}
-                className="bg-indigo-600 text-white p-2 rounded-full"
-              >
-                <Plus size={20} />
-              </button>
-            </div>
-            
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {members.map(member => (
-                <div 
-                  key={member.id}
-                  className={`p-3 rounded-lg border-2 cursor-pointer transition-colors ${
-                    activePersonality && activePersonality.id === member.id 
-                      ? 'border-indigo-600 bg-indigo-50' 
-                      : 'border-gray-200 hover:border-indigo-300'
-                  }`}
-                  onClick={() => setActivePersonality(member)}
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-medium">{member.name}</h3>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <span className="font-semibold">{member.personality}</span>
-                        <span className="mx-2">|</span>
-                        <span className="text-xs">{member.traits.slice(0, 2).join(', ')}</span>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveMember(member.id);
-                      }}
-                      className="text-gray-400 hover:text-red-500"
-                    >
-                      <X size={18} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-              
-              {members.length === 0 && (
-                <div className="text-center text-gray-500 py-4">
-                  <p>No members added yet</p>
-                  <button 
-                    onClick={() => setShowAddModal(true)}
-                    className="mt-2 text-indigo-600 hover:underline"
-                  >
-                    Add your first member
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Compatibility Display */}
-          <div className="bg-white p-4 rounded-lg shadow-md md:col-span-2">
-            {activePersonality ? (
-              <>
-                <div className="mb-4">
-                  <h2 className="text-lg font-semibold">
-                    Compatibility with {activePersonality.name}
-                  </h2>
-                  <div className="text-sm text-gray-600">
-                    <span className="font-medium">{activePersonality.personality}</span> | 
-                    {activePersonality.traits.join(', ')}
-                  </div>
-                </div>
-                
-                {/* Compatibility Filters */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <button 
-                    onClick={() => setCompatibilityFilter('all')}
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      compatibilityFilter === 'all' 
-                        ? 'bg-gray-800 text-white' 
-                        : 'bg-gray-200 text-gray-800'
-                    }`}
-                  >
-                    All
-                  </button>
-                  <button 
-                    onClick={() => setCompatibilityFilter('Perfect')}
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      compatibilityFilter === 'Perfect' 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-blue-100 text-blue-800'
-                    }`}
-                  >
-                    Perfect
-                  </button>
-                  <button 
-                    onClick={() => setCompatibilityFilter('Good')}
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      compatibilityFilter === 'Good' 
-                        ? 'bg-green-600 text-white' 
-                        : 'bg-green-100 text-green-800'
-                    }`}
-                  >
-                    Good
-                  </button>
-                  <button 
-                    onClick={() => setCompatibilityFilter('OK')}
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      compatibilityFilter === 'OK' 
-                        ? 'bg-lime-600 text-white' 
-                        : 'bg-lime-100 text-lime-800'
-                    }`}
-                  >
-                    OK
-                  </button>
-                  <button 
-                    onClick={() => setCompatibilityFilter('Not Bad')}
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      compatibilityFilter === 'Not Bad' 
-                        ? 'bg-amber-600 text-white' 
-                        : 'bg-amber-100 text-amber-800'
-                    }`}
-                  >
-                    Not Bad
-                  </button>
-                  <button 
-                    onClick={() => setCompatibilityFilter('Challenging')}
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      compatibilityFilter === 'Challenging' 
-                        ? 'bg-red-600 text-white' 
-                        : 'bg-red-100 text-red-800'
-                    }`}
-                  >
-                    Challenging
-                  </button>
-                </div>
-                
-                {/* Compatibility Chart */}
-                <div className="h-64 mb-4">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={getChartData()}
-                      layout="vertical"
-                      margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" domain={[0, 50]} />
-                      <YAxis dataKey="name" type="category" width={80} />
-                      <Tooltip 
-                        formatter={(value, name, props) => [`${value}/50`, 'Compatibility Score']}
-                        labelFormatter={(value) => `${value}`}
-                      />
-                      <Bar 
-                        dataKey="score" 
-                        name="Compatibility Score"
-                        barSize={20}
-                        radius={[0, 4, 4, 0]}
-                      >
-                        {getChartData().map((entry, index) => (
-                          <rect key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                
-                {/* Compatibility Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {getChartData().length > 0 ? getChartData().map((data) => (
-                    <div 
-                      key={data.name}
-                      className="border p-3 rounded-lg"
-                      style={{ borderColor: data.color }}
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-medium">{data.name}</h3>
-                        <span 
-                          className="px-2 py-1 rounded-full text-xs text-white"
-                          style={{ backgroundColor: data.color }}
-                        >
-                          {data.compatibility}
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        <div className="flex justify-between">
-                          <span>Compatibility Score:</span>
-                          <span className="font-semibold">{data.score}/50</span>
-                        </div>
-                      </div>
-                    </div>
-                  )) : (
-                    <div className="col-span-2 text-center text-gray-500 py-6">
-                      <p>Add more members to see compatibility</p>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full py-12 text-gray-500">
-                <p className="mb-2">Select a member to see their compatibility</p>
-                {members.length < 2 && (
-                  <p className="text-sm">You need at least two members to compare</p>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </main>
-
-      {/* Add Member Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Add New Member</h2>
-              <button 
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={24} />
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              {/* Name Input */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Name
-                </label>
-                <input 
-                  type="text"
-                  value={newMember.name}
-                  onChange={(e) => setNewMember({...newMember, name: e.target.value})}
-                  className="w-full p-2 border rounded-lg"
-                  placeholder="Enter name"
-                />
-              </div>
-              
-              {/* Personality Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Personality Type
-                </label>
-                <select
-                  value={newMember.personality}
-                  onChange={(e) => setNewMember({...newMember, personality: e.target.value})}
-                  className="w-full p-2 border rounded-lg"
-                >
-                  {personalityTypes.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-              
-              {/* Preference Strength Sliders */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Preference Strength
-                </label>
-                
-                <div className="space-y-4">
-                  <div>
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>Introvert</span>
-                      <span>Extrovert</span>
-                    </div>
-                    <input 
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={newMember.energy}
-                      onChange={(e) => setNewMember({...newMember, energy: parseInt(e.target.value)})}
-                      className="w-full"
-                    />
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>Sensing</span>
-                      <span>Intuition</span>
-                    </div>
-                    <input 
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={newMember.information}
-                      onChange={(e) => setNewMember({...newMember, information: parseInt(e.target.value)})}
-                      className="w-full"
-                    />
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>Thinking</span>
-                      <span>Feeling</span>
-                    </div>
-                    <input 
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={newMember.decisions}
-                      onChange={(e) => setNewMember({...newMember, decisions: parseInt(e.target.value)})}
-                      className="w-full"
-                    />
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>Perceiving</span>
-                      <span>Judging</span>
-                    </div>
-                    <input 
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={newMember.lifestyle}
-                      onChange={(e) => setNewMember({...newMember, lifestyle: parseInt(e.target.value)})}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {/* Traits Selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Key Traits (select up to 5)
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {traitOptions.map(trait => (
-                    <button
-                      key={trait}
-                      onClick={() => handleTraitToggle(trait)}
-                      className={`px-3 py-1 text-xs rounded-full ${
-                        newMember.traits.includes(trait)
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-gray-200 text-gray-800'
-                      }`}
-                    >
-                      {trait}
-                    </button>
-                  ))}
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {newMember.traits.length}/5 traits selected
-                </div>
-              </div>
-              
-              <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAddMember}
-                  className="flex-1 py-2 bg-indigo-600 text-white rounded-lg disabled:bg-indigo-300"
-                  disabled={!newMember.name}
-                >
-                  Add Member
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Info Modal */}
-      {showInfoModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-screen overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">About Personality Chemistry</h2>
-              <button 
-                onClick={() => setShowInfoModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={24} />
-              </button>
-            </div>
-            
-            <div className="space-y-4 text-sm">
-              <p>
-                This advanced personality compatibility tool goes beyond basic MBTI compatibility by analyzing:
-              </p>
-              
-              <ul className="list-disc pl-5 space-y-1">
-                <li><strong>Preference strength</strong> - The intensity of each MBTI dimension</li>
-                <li><strong>Personal traits</strong> - Specific characteristics that add depth to compatibility</li>
-                <li><strong>Multiple compatibility factors</strong> - A sophisticated algorithm that considers various aspects of personality</li>
-              </ul>
-              
-              <p>
-                Compatibility scores are calculated on a 50-point scale:
-              </p>
-              
-              <div className="space-y-1">
-                <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full bg-blue-600 mr-2"></div>
-                  <span><strong>Perfect (45-50)</strong>: Exceptional compatibility</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full bg-green-600 mr-2"></div>
-                  <span><strong>Good (35-44)</strong>: Strong compatibility</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full bg-lime-600 mr-2"></div>
-                  <span><strong>OK (25-34)</strong>: Moderate compatibility</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full bg-amber-500 mr-2"></div>
-                  <span><strong>Not Bad (15-24)</strong>: Some compatibility challenges</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full bg-red-600 mr-2"></div>
-                  <span><strong>Challenging (0-14)</strong>: Significant compatibility challenges</span>
-                </div>
-              </div>
-              
-              <p>
-                Remember that this tool is meant to be informative and fun - real relationships are complex and nuanced beyond what any personality system can fully capture.
-              </p>
-              
-              <button
-                onClick={() => setShowInfoModal(false)}
-                className="w-full py-2 mt-2 bg-indigo-600 text-white rounded-lg"
-              >
-                Got it
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
-  );
-};
 
-export default PersonalityChemistry;
+    <script>
+        class AirflowVisualizer {
+            constructor() {
+                this.canvas = document.getElementById('airflowCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.particles = [];
+                this.vectors = [];
+                this.isAnimating = true;
+                this.time = 0;
+                this.lastFrameTime = 0;
+                this.fps = 0;
+                this.uploadedImage = null;
+                
+                this.settings = {
+                    flowStrength: 50,
+                    turbulence: 30,
+                    viscosity: 20,
+                    flowDirection: 0,
+                    particleCount: 2000,
+                    particleSize: 2,
+                    particleSpeed: 10,
+                    trailLength: 8,
+                    particleColor: '#4fc3f7',
+                    showVectors: true,
+                    vectorDensity: 30,
+                    vectorScale: 15,
+                    vectorColor: '#ffffff',
+                    animationSpeed: 30,
+                    timeScale: 10,
+                    flowPattern: 'uniform',
+                    imageOpacity: 50,
+                    imageScale: 100
+                };
+
+                this.init();
+            }
+
+            init() {
+                this.resizeCanvas();
+                this.setupEventListeners();
+                this.initializeParticles();
+                this.generateVectorField();
+                this.animate();
+            }
+
+            resizeCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
+                this.width = this.canvas.width;
+                this.height = this.canvas.height;
+            }
+
+            setupEventListeners() {
+                window.addEventListener('resize', () => this.resizeCanvas());
+                
+                // Control panel listeners
+                document.getElementById('imageUpload').addEventListener('change', (e) => this.handleImageUpload(e));
+                
+                // Slider listeners
+                const sliders = [
+                    'flowStrength', 'turbulence', 'viscosity', 'flowDirection',
+                    'particleCount', 'particleSize', 'particleSpeed', 'trailLength',
+                    'vectorDensity', 'vectorScale', 'animationSpeed', 'timeScale',
+                    'imageOpacity', 'imageScale'
+                ];
+                
+                sliders.forEach(id => {
+                    const slider = document.getElementById(id);
+                    const display = document.getElementById(id + 'Value');
+                    slider.addEventListener('input', (e) => {
+                        this.settings[id] = parseInt(e.target.value);
+                        display.textContent = id === 'flowDirection' ? e.target.value + '°' : 
+                                            id.includes('Opacity') || id.includes('Scale') ? e.target.value + '%' : 
+                                            e.target.value;
+                        this.updateSimulation();
+                    });
+                });
+
+                // Color pickers
+                document.getElementById('particleColor').addEventListener('change', (e) => {
+                    this.settings.particleColor = e.target.value;
+                });
+                
+                document.getElementById('vectorColor').addEventListener('change', (e) => {
+                    this.settings.vectorColor = e.target.value;
+                });
+
+                // Checkboxes
+                document.getElementById('showVectors').addEventListener('change', (e) => {
+                    this.settings.showVectors = e.target.checked;
+                });
+
+                // Select
+                document.getElementById('flowPattern').addEventListener('change', (e) => {
+                    this.settings.flowPattern = e.target.value;
+                    this.generateVectorField();
+                });
+
+                // Mouse interaction
+                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                this.canvas.addEventListener('click', (e) => this.handleMouseClick(e));
+            }
+
+            handleImageUpload(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            this.uploadedImage = img;
+                            const preview = document.getElementById('imagePreview');
+                            preview.src = event.target.result;
+                            preview.style.display = 'block';
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+
+            handleMouseMove(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Create local disturbance
+                this.particles.forEach(particle => {
+                    const dx = particle.x - x;
+                    const dy = particle.y - y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 100) {
+                        const force = (100 - distance) / 100;
+                        particle.vx += (dx / distance) * force * 0.1;
+                        particle.vy += (dy / distance) * force * 0.1;
+                    }
+                });
+            }
+
+            handleMouseClick(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                // Create explosion effect
+                for (let i = 0; i < 50; i++) {
+                    const angle = (Math.PI * 2 * i) / 50;
+                    const speed = Math.random() * 5 + 2;
+                    this.particles.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        life: 1,
+                        maxLife: 60
+                    });
+                }
+            }
+
+            initializeParticles() {
+                this.particles = [];
+                for (let i = 0; i < this.settings.particleCount; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.width,
+                        y: Math.random() * this.height,
+                        vx: 0,
+                        vy: 0,
+                        life: 1,
+                        maxLife: this.settings.trailLength * 10,
+                        trail: []
+                    });
+                }
+            }
+
+            generateVectorField() {
+                this.vectors = [];
+                const spacing = this.width / this.settings.vectorDensity;
+                
+                for (let x = spacing; x < this.width; x += spacing) {
+                    for (let y = spacing; y < this.height; y += spacing) {
+                        const vector = this.calculateFlowVector(x, y);
+                        this.vectors.push({
+                            x: x,
+                            y: y,
+                            vx: vector.vx,
+                            vy: vector.vy
+                        });
+                    }
+                }
+            }
+
+            calculateFlowVector(x, y) {
+                const centerX = this.width / 2;
+                const centerY = this.height / 2;
+                const dx = x - centerX;
+                const dy = y - centerY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx);
+                
+                let vx = 0, vy = 0;
+                const strength = this.settings.flowStrength / 100;
+                const turbulence = this.settings.turbulence / 100;
+                const direction = (this.settings.flowDirection * Math.PI) / 180;
+                
+                switch (this.settings.flowPattern) {
+                    case 'uniform':
+                        vx = Math.cos(direction) * strength;
+                        vy = Math.sin(direction) * strength;
+                        break;
+                    
+                    case 'vortex':
+                        vx = -Math.sin(angle) * strength * (1 - distance / Math.max(this.width, this.height));
+                        vy = Math.cos(angle) * strength * (1 - distance / Math.max(this.width, this.height));
+                        break;
+                    
+                    case 'radial':
+                        vx = (dx / distance) * strength;
+                        vy = (dy / distance) * strength;
+                        break;
+                    
+                    case 'spiral':
+                        const spiralAngle = angle + this.time * 0.01;
+                        vx = Math.cos(spiralAngle) * strength;
+                        vy = Math.sin(spiralAngle) * strength;
+                        break;
+                    
+                    case 'wave':
+                        vx = Math.sin(y * 0.01 + this.time * 0.02) * strength;
+                        vy = Math.cos(x * 0.01 + this.time * 0.02) * strength;
+                        break;
+                    
+                    case 'turbulent':
+                        vx = (Math.sin(x * 0.01 + this.time * 0.01) + Math.cos(y * 0.01)) * strength;
+                        vy = (Math.cos(x * 0.01 + this.time * 0.01) + Math.sin(y * 0.01)) * strength;
+                        break;
+                }
+                
+                // Add turbulence
+                vx += (Math.random() - 0.5) * turbulence;
+                vy += (Math.random() - 0.5) * turbulence;
+                
+                return { vx, vy };
+            }
+
+            updateParticles() {
+                this.particles.forEach((particle, index) => {
+                    // Update trail
+                    particle.trail.push({ x: particle.x, y: particle.y, life: particle.life });
+                    if (particle.trail.length > this.settings.trailLength) {
+                        particle.trail.shift();
+                    }
+                    
+                    // Calculate flow influence
+                    const flow = this.calculateFlowVector(particle.x, particle.y);
+                    const speed = this.settings.particleSpeed / 100;
+                    
+                    // Apply flow
+                    particle.vx += flow.vx * speed;
+                    particle.vy += flow.vy * speed;
+                    
+                    // Apply viscosity
+                    const viscosity = 1 - (this.settings.viscosity / 200);
+                    particle.vx *= viscosity;
+                    particle.vy *= viscosity;
+                    
+                    // Update position
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    
+                    // Boundary conditions
+                    if (particle.x < 0) particle.x = this.width;
+                    if (particle.x > this.width) particle.x = 0;
+                    if (particle.y < 0) particle.y = this.height;
+                    if (particle.y > this.height) particle.y = 0;
+                    
+                    // Update life
+                    particle.life -= 1 / particle.maxLife;
+                    if (particle.life <= 0) {
+                        particle.x = Math.random() * this.width;
+                        particle.y = Math.random() * this.height;
+                        particle.vx = 0;
+                        particle.vy = 0;
+                        particle.life = 1;
+                        particle.trail = [];
+                    }
+                });
+            }
+
+            render() {
+                // Clear canvas with fade effect
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+                this.ctx.fillRect(0, 0, this.width, this.height);
+                
+                // Draw background image if uploaded
+                if (this.uploadedImage) {
+                    this.ctx.save();
+                    this.ctx.globalAlpha = this.settings.imageOpacity / 100;
+                    
+                    const scale = this.settings.imageScale / 100;
+                    const imgWidth = this.uploadedImage.width * scale;
+                    const imgHeight = this.uploadedImage.height * scale;
+                    const x = (this.width - imgWidth) / 2;
+                    const y = (this.height - imgHeight) / 2;
+                    
+                    this.ctx.drawImage(this.uploadedImage, x, y, imgWidth, imgHeight);
+                    this.ctx.restore();
+                }
+                
+                // Draw vector field
+                if (this.settings.showVectors) {
+                    this.ctx.strokeStyle = this.settings.vectorColor;
+                    this.ctx.lineWidth = 1;
+                    this.ctx.globalAlpha = 0.3;
+                    
+                    this.vectors.forEach(vector => {
+                        const scale = this.settings.vectorScale;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(vector.x, vector.y);
+                        this.ctx.lineTo(
+                            vector.x + vector.vx * scale,
+                            vector.y + vector.vy * scale
+                        );
+                        this.ctx.stroke();
+                        
+                        // Arrow head
+                        const angle = Math.atan2(vector.vy, vector.vx);
+                        const headLength = 5;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(
+                            vector.x + vector.vx * scale,
+                            vector.y + vector.vy * scale
+                        );
+                        this.ctx.lineTo(
+                            vector.x + vector.vx * scale - headLength * Math.cos(angle - Math.PI / 6),
+                            vector.y + vector.vy * scale - headLength * Math.sin(angle - Math.PI / 6)
+                        );
+                        this.ctx.lineTo(
+                            vector.x + vector.vx * scale - headLength * Math.cos(angle + Math.PI / 6),
+                            vector.y + vector.vy * scale - headLength * Math.sin(angle + Math.PI / 6)
+                        );
+                        this.ctx.stroke();
+                    });
+                }
+                
+                // Draw particles and trails
+                this.ctx.globalAlpha = 1;
+                this.particles.forEach(particle => {
+                    // Draw trail
+                    particle.trail.forEach((point, index) => {
+                        const alpha = (index / particle.trail.length) * particle.life * 0.5;
+                        this.ctx.fillStyle = this.hexToRgba(this.settings.particleColor, alpha);
+                        this.ctx.beginPath();
+                        this.ctx.arc(point.x, point.y, this.settings.particleSize * 0.5, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    });
+                    
+                    // Draw particle
+                    this.ctx.fillStyle = this.hexToRgba(this.settings.particleColor, particle.life);
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, this.settings.particleSize, 0, Math.PI * 2);
+                    this.ctx.fill();
+                });
+            }
+
+            hexToRgba(hex, alpha) {
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+
+            updateSimulation() {
+                if (this.particles.length !== this.settings.particleCount) {
+                    this.initializeParticles();
+                }
+                this.generateVectorField();
+            }
+
+            animate() {
+                if (this.isAnimating) {
+                    const currentTime = performance.now();
+                    const deltaTime = currentTime - this.lastFrameTime;
+                    this.fps = Math.round(1000 / deltaTime);
+                    this.lastFrameTime = currentTime;
+                    
+                    this.time += this.settings.animationSpeed / 1000;
+                    
+                    this.updateParticles();
+                    this.render();
+                    this.updateStats();
+                }
+                
+                requestAnimationFrame(() => this.animate());
+            }
+
+            updateStats() {
+                document.getElementById('fpsCounter').textContent = this.fps;
+                document.getElementById('particleCounter').textContent = this.particles.length;
+                
+                // Calculate average flow rate
+                let totalSpeed = 0;
+                this.particles.forEach(particle => {
+                    totalSpeed += Math.sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
+                });
+                const avgSpeed = totalSpeed / this.particles.length;
+                document.getElementById('flowRate').textContent = (avgSpeed * 10).toFixed(1);
+            }
+        }
+
+        // Global functions
+        function toggleAnimation() {
+            visualizer.isAnimating = !visualizer.isAnimating;
+        }
+
+        function resetSimulation() {
+            visualizer.time = 0;
+            visualizer.initializeParticles();
+            visualizer.generateVectorField();
+        }
+
+        function exportFrame() {
+            const link = document.createElement('a');
+            link.download = 'airflow-visualization.png';
+            link.href = visualizer.canvas.toDataURL();
+            link.click();
+        }
+
+        function loadPreset(preset) {
+            const presets = {
+                wind: {
+                    flowStrength: 70,
+                    turbulence: 10,
+                    viscosity: 5,
+                    flowDirection: 0,
+                    particleSpeed: 20,
+                    flowPattern: 'uniform'
+                },
+                hurricane: {
+                    flowStrength: 90,
+                    turbulence: 60,
+                    viscosity: 30,
+                    flowDirection: 0,
+                    particleSpeed: 30,
+                    flowPattern: 'vortex'
+                },
+                laminar: {
+                    flowStrength: 40,
+                    turbulence: 5,
+                    viscosity: 80,
+                    flowDirection: 90,
+                    particleSpeed: 15,
+                    flowPattern: 'uniform'
+                },
+                chaos: {
+                    flowStrength: 100,
+                    turbulence: 95,
+                    viscosity: 10,
+                    flowDirection: 0,
+                    particleSpeed: 40,
+                    flowPattern: 'turbulent'
+                },
+                gentle: {
+                    flowStrength: 20,
+                    turbulence: 15,
+                    viscosity: 60,
+                    flowDirection: 45,
+                    particleSpeed: 8,
+                    flowPattern: 'wave'
+                },
+                industrial: {
+                    flowStrength: 80,
+                    turbulence: 25,
+                    viscosity: 15,
+                    flowDirection: 0,
+                    particleSpeed: 25,
+                    flowPattern: 'radial'
+                }
+            };
+
+            const config = presets[preset];
+            if (config) {
+                Object.keys(config).forEach(key => {
+                    visualizer.settings[key] = config[key];
+                    const slider = document.getElementById(key);
+                    const display = document.getElementById(key + 'Value');
+                    if (slider && display) {
+                        slider.value = config[key];
+                        display.textContent = key === 'flowDirection' ? config[key] + '°' : config[key];
+                    }
+                });
+
+                // Update flow pattern select
+                document.getElementById('flowPattern').value = config.flowPattern;
+                visualizer.updateSimulation();
+            }
+        }
+
+        // Advanced Features Class
+        class AdvancedFeatures {
+            constructor(visualizer) {
+                this.visualizer = visualizer;
+                this.obstacles = [];
+                this.sources = [];
+                this.sinks = [];
+                this.pressureField = [];
+                this.heatMap = false;
+                this.streamlines = [];
+                this.recording = false;
+                this.recordedFrames = [];
+            }
+
+            addObstacle(x, y, radius, type = 'circle') {
+                this.obstacles.push({
+                    x, y, radius, type,
+                    id: Date.now() + Math.random()
+                });
+                this.updateFlowField();
+            }
+
+            addSource(x, y, strength = 1) {
+                this.sources.push({
+                    x, y, strength,
+                    id: Date.now() + Math.random()
+                });
+            }
+
+            addSink(x, y, strength = 1) {
+                this.sinks.push({
+                    x, y, strength,
+                    id: Date.now() + Math.random()
+                });
+            }
+
+            calculatePressureField() {
+                const resolution = 20;
+                this.pressureField = [];
+                
+                for (let x = 0; x < this.visualizer.width; x += resolution) {
+                    for (let y = 0; y < this.visualizer.height; y += resolution) {
+                        let pressure = 0;
+                        
+                        // Calculate pressure from obstacles
+                        this.obstacles.forEach(obstacle => {
+                            const dx = x - obstacle.x;
+                            const dy = y - obstacle.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            if (distance < obstacle.radius * 2) {
+                                pressure += (obstacle.radius * 2 - distance) / (obstacle.radius * 2);
+                            }
+                        });
+
+                        // Calculate pressure from sources and sinks
+                        this.sources.forEach(source => {
+                            const dx = x - source.x;
+                            const dy = y - source.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            pressure += source.strength / (distance + 1);
+                        });
+
+                        this.sinks.forEach(sink => {
+                            const dx = x - sink.x;
+                            const dy = y - sink.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            pressure -= sink.strength / (distance + 1);
+                        });
+
+                        this.pressureField.push({ x, y, pressure });
+                    }
+                }
+            }
+
+            generateStreamlines() {
+                this.streamlines = [];
+                const numLines = 20;
+                
+                for (let i = 0; i < numLines; i++) {
+                    const startX = (this.visualizer.width / numLines) * i;
+                    const startY = Math.random() * this.visualizer.height;
+                    const streamline = this.traceStreamline(startX, startY);
+                    this.streamlines.push(streamline);
+                }
+            }
+
+            traceStreamline(startX, startY) {
+                const points = [];
+                let x = startX;
+                let y = startY;
+                const maxPoints = 200;
+                const stepSize = 2;
+
+                for (let i = 0; i < maxPoints; i++) {
+                    points.push({ x, y });
+                    
+                    const flow = this.visualizer.calculateFlowVector(x, y);
+                    const magnitude = Math.sqrt(flow.vx * flow.vx + flow.vy * flow.vy);
+                    
+                    if (magnitude < 0.01) break;
+                    
+                    x += (flow.vx / magnitude) * stepSize;
+                    y += (flow.vy / magnitude) * stepSize;
+                    
+                    if (x < 0 || x > this.visualizer.width || y < 0 || y > this.visualizer.height) {
+                        break;
+                    }
+                }
+
+                return points;
+            }
+
+            updateFlowField() {
+                // Recalculate flow field considering obstacles
+                this.visualizer.generateVectorField();
+                this.calculatePressureField();
+                this.generateStreamlines();
+            }
+
+            renderAdvanced(ctx) {
+                // Render pressure field as heat map
+                if (this.heatMap) {
+                    this.renderHeatMap(ctx);
+                }
+
+                // Render streamlines
+                this.renderStreamlines(ctx);
+
+                // Render obstacles
+                this.renderObstacles(ctx);
+
+                // Render sources and sinks
+                this.renderSourcesSinks(ctx);
+            }
+
+            renderHeatMap(ctx) {
+                this.pressureField.forEach(point => {
+                    const intensity = Math.min(Math.abs(point.pressure), 1);
+                    const color = point.pressure > 0 ? 
+                        `rgba(255, 0, 0, ${intensity * 0.3})` : 
+                        `rgba(0, 0, 255, ${intensity * 0.3})`;
+                    
+                    ctx.fillStyle = color;
+                    ctx.fillRect(point.x - 10, point.y - 10, 20, 20);
+                });
+            }
+
+            renderStreamlines(ctx) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.lineWidth = 1;
+                
+                this.streamlines.forEach(streamline => {
+                    if (streamline.length > 1) {
+                        ctx.beginPath();
+                        ctx.moveTo(streamline[0].x, streamline[0].y);
+                        streamline.forEach(point => {
+                            ctx.lineTo(point.x, point.y);
+                        });
+                        ctx.stroke();
+                    }
+                });
+            }
+
+            renderObstacles(ctx) {
+                ctx.fillStyle = 'rgba(100, 100, 100, 0.8)';
+                ctx.strokeStyle = 'rgba(150, 150, 150, 1)';
+                ctx.lineWidth = 2;
+                
+                this.obstacles.forEach(obstacle => {
+                    ctx.beginPath();
+                    if (obstacle.type === 'circle') {
+                        ctx.arc(obstacle.x, obstacle.y, obstacle.radius, 0, Math.PI * 2);
+                    } else if (obstacle.type === 'square') {
+                        ctx.rect(
+                            obstacle.x - obstacle.radius,
+                            obstacle.y - obstacle.radius,
+                            obstacle.radius * 2,
+                            obstacle.radius * 2
+                        );
+                    }
+                    ctx.fill();
+                    ctx.stroke();
+                });
+            }
+
+            renderSourcesSinks(ctx) {
+                // Render sources
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.6)';
+                this.sources.forEach(source => {
+                    ctx.beginPath();
+                    ctx.arc(source.x, source.y, 10 * source.strength, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw plus sign
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(source.x - 5, source.y);
+                    ctx.lineTo(source.x + 5, source.y);
+                    ctx.moveTo(source.x, source.y - 5);
+                    ctx.lineTo(source.x, source.y + 5);
+                    ctx.stroke();
+                });
+
+                // Render sinks
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.6)';
+                this.sinks.forEach(sink => {
+                    ctx.beginPath();
+                    ctx.arc(sink.x, sink.y, 10 * sink.strength, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw minus sign
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(sink.x - 5, sink.y);
+                    ctx.lineTo(sink.x + 5, sink.y);
+                    ctx.stroke();
+                });
+            }
+
+            startRecording() {
+                this.recording = true;
+                this.recordedFrames = [];
+            }
+
+            stopRecording() {
+                this.recording = false;
+                return this.recordedFrames;
+            }
+
+            recordFrame() {
+                if (this.recording) {
+                    this.recordedFrames.push(this.visualizer.canvas.toDataURL());
+                }
+            }
+        }
+
+        // Initialize the visualizer
+        let visualizer;
+        let advancedFeatures;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            visualizer = new AirflowVisualizer();
+            advancedFeatures = new AdvancedFeatures(visualizer);
+
+            // Override the render method to include advanced features
+            const originalRender = visualizer.render.bind(visualizer);
+            visualizer.render = function() {
+                originalRender();
+                advancedFeatures.renderAdvanced(this.ctx);
+                advancedFeatures.recordFrame();
+            };
+
+            // Add advanced interaction handlers
+            let currentTool = 'particle';
+            let isDrawing = false;
+
+            visualizer.canvas.addEventListener('mousedown', (e) => {
+                isDrawing = true;
+                const rect = visualizer.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                switch(currentTool) {
+                    case 'obstacle':
+                        advancedFeatures.addObstacle(x, y, 20);
+                        break;
+                    case 'source':
+                        advancedFeatures.addSource(x, y, 1);
+                        break;
+                    case 'sink':
+                        advancedFeatures.addSink(x, y, 1);
+                        break;
+                }
+            });
+
+            visualizer.canvas.addEventListener('mouseup', () => {
+                isDrawing = false;
+            });
+
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                switch(e.key) {
+                    case ' ':
+                        e.preventDefault();
+                        toggleAnimation();
+                        break;
+                    case 'r':
+                        resetSimulation();
+                        break;
+                    case 'h':
+                        advancedFeatures.heatMap = !advancedFeatures.heatMap;
+                        advancedFeatures.calculatePressureField();
+                        break;
+                    case 's':
+                        advancedFeatures.generateStreamlines();
+                        break;
+                    case '1':
+                        currentTool = 'particle';
+                        break;
+                    case '2':
+                        currentTool = 'obstacle';
+                        break;
+                    case '3':
+                        currentTool = 'source';
+                        break;
+                    case '4':
+                        currentTool = 'sink';
+                        break;
+                }
+            });
+
+            // Performance monitoring
+            setInterval(() => {
+                const memoryInfo = performance.memory;
+                if (memoryInfo) {
+                    console.log('Memory usage:', {
+                        used: Math.round(memoryInfo.usedJSHeapSize / 1048576) + 'MB',
+                        total: Math.round(memoryInfo.totalJSHeapSize / 1048576) + 'MB',
+                        limit: Math.round(memoryInfo.jsHeapSizeLimit / 1048576) + 'MB'
+                    });
+                }
+            }, 5000);
+
+            console.log('🌪️ Advanced Airflow Visualizer Loaded');
+            console.log('Keyboard shortcuts:');
+            console.log('- Space: Play/Pause');
+            console.log('- R: Reset simulation');
+            console.log('- H: Toggle heat map');
+            console.log('- S: Generate streamlines');
+            console.log('- 1: Particle tool');
+            console.log('- 2: Obstacle tool');
+            console.log('- 3: Source tool');
+            console.log('- 4: Sink tool');
+        });
+
+        // Export functions for GitHub integration
+        window.AirflowVisualizer = {
+            export: () => {
+                return {
+                    settings: visualizer.settings,
+                    obstacles: advancedFeatures.obstacles,
+                    sources: advancedFeatures.sources,
+                    sinks: advancedFeatures.sinks
+                };
+            },
+            import: (data) => {
+                if (data.settings) {
+                    Object.assign(visualizer.settings, data.settings);
+                    visualizer.updateSimulation();
+                }
+                if (data.obstacles) {
+                    advancedFeatures.obstacles = data.obstacles;
+                }
+                if (data.sources) {
+                    advancedFeatures.sources = data.sources;
+                }
+                if (data.sinks) {
+                    advancedFeatures.sinks = data.sinks;
+                }
+                advancedFeatures.updateFlowField();
+            },
+            startRecording: () => advancedFeatures.startRecording(),
+            stopRecording: () => advancedFeatures.stopRecording(),
+            version: '2.0.0'
+        };
+    </script>
+</body>
+</html>
